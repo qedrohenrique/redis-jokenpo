@@ -310,6 +310,182 @@ yarn typecheck            # Verificação de tipos
 
 Este projeto está sob a licença MIT.
 
+## 🗄️ Entidades do Redis (Visão SQL)
+
+Para facilitar o entendimento da estrutura de dados, aqui está uma comparação das entidades do Redis com tabelas SQL equivalentes:
+
+### **Tabela: `game_players` (Hash)**
+```sql
+-- Equivalente SQL
+CREATE TABLE game_players (
+    player_id VARCHAR(255) PRIMARY KEY,
+    player_data JSON NOT NULL
+);
+
+-- Exemplo de dados
+INSERT INTO game_players VALUES 
+('player_1234567890_abc123', '{"id":"player_1234567890_abc123","name":"João","choice":"Pedra","timestamp":1703123456789}'),
+('player_1234567891_def456', '{"id":"player_1234567891_def456","name":"Maria","choice":"Papel","timestamp":1703123456790}');
+```
+
+**Redis:**
+```redis
+HSET game:players player_1234567890_abc123 '{"id":"player_1234567890_abc123","name":"João","choice":"Pedra","timestamp":1703123456789}'
+HSET game:players player_1234567891_def456 '{"id":"player_1234567891_def456","name":"Maria","choice":"Papel","timestamp":1703123456790}'
+```
+
+### **Tabela: `player_stats` (Hash)**
+```sql
+-- Equivalente SQL
+CREATE TABLE player_stats (
+    player_name VARCHAR(255) PRIMARY KEY,
+    wins INT DEFAULT 0,
+    losses INT DEFAULT 0,
+    draws INT DEFAULT 0,
+    total_games INT DEFAULT 0
+);
+
+-- Exemplo de dados
+INSERT INTO player_stats VALUES 
+('João', 5, 2, 1, 8),
+('Maria', 3, 4, 1, 8),
+('Pedro', 7, 1, 0, 8);
+```
+
+**Redis:**
+```redis
+HSET player:João wins 5 losses 2 draws 1 totalGames 8
+HSET player:Maria wins 3 losses 4 draws 1 totalGames 8
+HSET player:Pedro wins 7 losses 1 draws 0 totalGames 8
+```
+
+### **Tabela: `game_ranking` (Sorted Set)**
+```sql
+-- Equivalente SQL
+CREATE TABLE game_ranking (
+    player_name VARCHAR(255) PRIMARY KEY,
+    wins INT NOT NULL,
+    UNIQUE KEY idx_wins (wins, player_name)
+);
+
+-- Exemplo de dados (ordenados por wins DESC)
+INSERT INTO game_ranking VALUES 
+('Pedro', 7),
+('João', 5),
+('Maria', 3);
+```
+
+**Redis:**
+```redis
+ZADD game:ranking 7 "Pedro"
+ZADD game:ranking 5 "João"
+ZADD game:ranking 3 "Maria"
+```
+
+### **Tabela: `game_events` (Pub/Sub)**
+```sql
+-- Equivalente SQL (conceitual - não existe em SQL tradicional)
+CREATE TABLE game_events (
+    event_id AUTO_INCREMENT PRIMARY KEY,
+    event_type ENUM('PLAYER_JOIN', 'PLAYER_LEAVE', 'MOVE', 'GAME_RESULT', 'GAME_RESET'),
+    event_data JSON,
+    timestamp BIGINT,
+    subscribers JSON -- Lista de clientes inscritos
+);
+```
+
+**Redis:**
+```redis
+-- Canal de eventos
+PUBLISH rock-paper-scissors '{"type":"PLAYER_JOIN","player":{"name":"João","id":"player_123"},"timestamp":1703123456789}'
+SUBSCRIBE rock-paper-scissors
+```
+
+### **Relacionamentos e Consultas**
+
+#### **1. Buscar Top 5 Jogadores**
+```sql
+-- SQL
+SELECT player_name, wins, losses, draws, total_games 
+FROM player_stats 
+ORDER BY wins DESC 
+LIMIT 5;
+```
+
+```redis
+-- Redis
+ZREVRANGE game:ranking 0 4
+-- Depois buscar estatísticas completas
+HGETALL player:João
+HGETALL player:Maria
+-- etc...
+```
+
+#### **2. Contar Jogadores Ativos**
+```sql
+-- SQL
+SELECT COUNT(*) as active_players FROM game_players;
+```
+
+```redis
+-- Redis
+HLEN game:players
+```
+
+#### **3. Buscar Jogador Específico**
+```sql
+-- SQL
+SELECT * FROM game_players WHERE player_id = 'player_1234567890_abc123';
+```
+
+```redis
+-- Redis
+HGET game:players player_1234567890_abc123
+```
+
+#### **4. Atualizar Estatísticas**
+```sql
+-- SQL
+UPDATE player_stats 
+SET wins = wins + 1, total_games = total_games + 1 
+WHERE player_name = 'João';
+```
+
+```redis
+-- Redis
+HINCRBY player:João wins 1
+HINCRBY player:João totalGames 1
+ZADD game:ranking [novo_score] "João"
+```
+
+### **Vantagens do Redis vs SQL**
+
+| Aspecto | Redis | SQL |
+|---------|-------|-----|
+| **Performance** | Operações em memória (microssegundos) | Operações em disco (milissegundos) |
+| **Estruturas** | Hash, Sorted Set, List, String | Apenas tabelas relacionais |
+| **Pub/Sub** | Nativo e eficiente | Requer implementação adicional |
+| **Ordenação** | Automática em Sorted Sets | Requer ORDER BY |
+| **Flexibilidade** | Dados JSON, múltiplos tipos | Estrutura rígida |
+| **Escalabilidade** | Horizontal com cluster | Mais complexo |
+
+### **Padrões de Nomenclatura**
+
+```redis
+# Namespace:game:entidade
+game:players          # Jogadores ativos no jogo
+game:ranking          # Ranking ordenado por vitórias
+
+# Namespace:player:nome
+player:João           # Estatísticas do jogador João
+player:Maria          # Estatísticas do jogador Maria
+
+# Namespace:canal:eventos
+rock-paper-scissors   # Canal de eventos do jogo
+```
+
+Esta estrutura permite uma organização clara e eficiente dos dados, mantendo a performance e flexibilidade do Redis enquanto oferece uma visão familiar para desenvolvedores acostumados com bancos relacionais.
+
 ---
 
 **Desenvolvido com ❤️ usando React, TypeScript e Redis**
