@@ -6,11 +6,17 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "dev:full": "./scripts/dev.sh",
+    "redis:start": "docker-compose up -d redis",
+    "redis:stop": "docker-compose down",
+    "redis:logs": "docker-compose logs -f redis",
+    "redis:restart": "docker-compose restart redis"
   },
   "dependencies": {
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
+    "ioredis": "^5.6.1",
     "isbot": "^5.1.27",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
