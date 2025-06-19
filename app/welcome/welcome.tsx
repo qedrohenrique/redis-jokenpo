@@ -13,12 +13,14 @@ interface PlayerStats {
 }
 
 export function Welcome() {
+  console.log("Componente Welcome montado");
+
   const [playerName, setPlayerName] = useState("");
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [ranking, setRanking] = useState<PlayerStats[]>([]);
-  const [isRankingLoading, setIsRankingLoading] = useState(false);
+  const [isRankingLoading, setIsRankingLoading] = useState(true);
 
   const { players, gameResult, isConnected, lastMessage } = useGameSocket();
 
@@ -31,15 +33,20 @@ export function Welcome() {
     }
   }, [lastMessage, isJoined]);
 
-  // Buscar ranking ao montar ou quando há resultado de jogo
+  // Carregar ranking na primeira vez
   useEffect(() => {
+    console.log("Iniciando carregamento do ranking...");
     const fetchRanking = async () => {
-      setIsRankingLoading(true);
       try {
+        console.log("Fazendo requisição para /api/ranking...");
         const res = await fetch('/api/ranking');
+        console.log("Resposta recebida:", res.status, res.statusText);
         const data = await res.json();
+        console.log("Dados recebidos:", data);
         setRanking(data.topPlayers || []);
+        console.log("Ranking carregado:", data.topPlayers);
       } catch (e) {
+        console.error('Erro ao carregar ranking:', e);
         setRanking([]);
       } finally {
         setIsRankingLoading(false);
@@ -261,7 +268,7 @@ export function Welcome() {
 
           {/* Ranking */}
           <div className="mt-8">
-            <h3 className="text-lg text-black font-bold mb-2 text-center">🏅 Ranking Top 5</h3>
+            <h3 className="text-lg font-bold mb-2 text-center">🏅 Ranking Top 5</h3>
             {isRankingLoading ? (
               <div className="text-center text-gray-500 text-black">Carregando ranking...</div>
             ) : ranking.length === 0 ? (
